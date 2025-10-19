@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>眼动追踪认知评估系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="assets/scripts/webgazer.js"></script>
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="background-animation">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="circle circle-3"></div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面1: 欢迎页 -->
+        <div id="page-welcome" class="page active">
+            <div class="card welcome-card">
+                <div class="logo">
+                    <div class="eye-icon">👁️</div>
+                    <h1>眼动追踪认知评估系统</h1>
+                </div>
+                <p class="subtitle">基于眼动追踪技术的认知功能评估工具</p>
+                
+                <div class="info-section">
+                    <h3>系统说明</h3>
+                    <ul>
+                        <li>本系统通过分析眼动模式来评估认知功能</li>
+                        <li>包含4个标准化任务，总时长约2分钟</li>
+                        <li>需要摄像头权限以追踪眼动</li>
+                        <li>请在光线充足的环境中测试</li>
+                    </ul>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="age">年龄</label>
+                        <input type="number" id="age" min="1" max="120" placeholder="请输入您的年龄">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">性别</label>
+                        <select id="gender">
+                            <option value="male">男</option>
+                            <option value="female">女</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-large" onclick="app.startSystem()">
+                    开始评估
+                </button>
+            </div>
+        </div>
+
+        <!-- 页面2: 准备页 -->
+        <div id="page-prepare" class="page">
+            <div class="card task-card">
+                <h2 id="prepare-title">准备任务</h2>
+                <div class="task-description" id="prepare-description">
+                    任务描述
+                </div>
+                
+                <div class="countdown-circle">
+                    <svg width="200" height="200">
+                        <circle cx="100" cy="100" r="90" class="countdown-bg"></circle>
+                        <circle cx="100" cy="100" r="90" class="countdown-progress" id="prepare-progress"></circle>
+                    </svg>
+                    <div class="countdown-text" id="prepare-countdown">3</div>
+                </div>
+
+                <div class="task-info">
+                    <p>请准备好，任务即将开始</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面3: 任务执行页 -->
+        <div id="page-task" class="page">
+            <div class="task-header">
+                <h2 id="task-title">任务进行中</h2>
+                <div class="timer" id="task-timer">00:00</div>
+            </div>
+
+            <!-- Baseline 任务 -->
+            <div id="task-baseline" class="task-content" style="display: none;">
+                <div class="baseline-dots">
+                    <div class="dot" id="dot-center"></div>
+                    <div class="dot" id="dot-up"></div>
+                    <div class="dot" id="dot-right"></div>
+                    <div class="dot" id="dot-down"></div>
+                    <div class="dot" id="dot-left"></div>
+                </div>
+                <p class="task-instruction">请注视屏幕上的圆点</p>
+            </div>
+
+            <!-- 图片任务 -->
+            <div id="task-image" class="task-content" style="display: none;">
+                <div class="image-container">
+                    <img src="assets/pictures/rooster.png" alt="公鸡" class="task-image">
+                    <img src="assets/pictures/tree.png" alt="树" class="task-image">
+                </div>
+                <p class="task-instruction">请仔细观察这两张图片</p>
+            </div>
+
+            <!-- 视频任务 -->
+            <div id="task-video" class="task-content" style="display: none;">
+                <video id="video-player" width="800" height="450" autoplay loop>
+                    <source src="assets/videos/walking.mp4" type="video/mp4">
+                    您的浏览器不支持视频播放
+                </video>
+                <p class="task-instruction">请观看视频</p>
+            </div>
+
+            <!-- 文字任务 -->
+            <div id="task-text" class="task-content" style="display: none;">
+                <div class="text-passage">
+                    <h3>请朗读以下段落：</h3>
+                    <p class="passage-text">
+                        您想了解我的祖父吗？他已经快93岁了，但思维依然敏捷。
+                        他常穿一件旧的黑色礼服外套，通常会掉几颗扣子。
+                        长长的胡须垂在下巴上，给人一种庄重和尊敬的感觉。
+                        当他说话时，声音有点沙哑和颤抖。
+                        他每天会两次熟练而热情地演奏小风琴。
+                        除了冬天雨雪天气，他每天都会在户外散步一小段路。
+                        我们经常劝他多走路少抽烟，但他总是回答："胡说八道！"
+                        祖父喜欢在语言上追求时髦。
+                    </p>
+                </div>
+                <p class="task-instruction">请大声朗读上述文字</p>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="task-progress"></div>
+            </div>
+        </div>
+
+        <!-- 页面4: 处理中页 -->
+        <div id="page-processing" class="page">
+            <div class="card processing-card">
+                <div class="loading-spinner"></div>
+                <h2>正在分析数据...</h2>
+                <p id="processing-status">请稍候</p>
+                <div class="processing-progress">
+                    <div class="processing-bar" id="processing-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面5: 报告页 -->
+        <div id="page-report" class="page">
+            <div class="report-container">
+                <div class="report-header">
+                    <h1>评估报告</h1>
+                    <p class="report-date" id="report-date"></p>
+                </div>
+
+                <div class="report-tasks" id="report-tasks">
+                    <!-- 动态生成任务报告 -->
+                </div>
+
+                <div class="report-actions">
+                    <button class="btn btn-primary" onclick="app.restartSystem()">
+                        重新测试
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.print()">
+                        打印报告
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WebGazer 视频预览（隐藏） -->
+    <div id="webgazer-preview" style="display: none;"></div>
+
+    <!-- 加载脚本 -->
+    <script src="js/eye_tracker.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
