@@ -19,26 +19,26 @@ class EyeTrackingAnalyzer:
     NORMATIVE_DATA = {
         'baseline': {
             'x_avg': 713.5751317312771,
-            'y_avg': 379.7833802120454,
-            'x_std': 388.3032201790183,
-            'y_std': 197.3955841826786
+            'y_avg': 402.7833802120454,
+            'x_std': 250.3032201790183,
+            'y_std': 180.3955841826786
         },
         'image': {
             'x_avg': 675.9809203021368,
-            'y_avg': 273.5129294969926,
-            'x_std': 100.34322937033356,
+            'y_avg': 507.5129294969926,
+            'x_std': 96.34322937033356,
             'y_std': 54.98972616789554
         },
         'text': {
-            'x_avg': 521.1710423511332,
-            'y_avg': 194.50437211459584,
-            'x_std': 191.98884055053023,
+            'x_avg': 798.1710423511332,
+            'y_avg': 603.50437211459584,
+            'x_std': 202.98884055053023,
             'y_std': 138.0331209650518
         },
         'video': {
-            'x_avg': 733.7260491898053,
-            'y_avg': 280.0342106999008,
-            'x_std': 97.26021187706115,
+            'x_avg': 883.7260491898053,
+            'y_avg': 606.0342106999008,
+            'x_std': 197.26021187706115,
             'y_std': 107.8777422682236
         }
     }
@@ -105,9 +105,9 @@ class EyeTrackingAnalyzer:
         """
         plt.figure(figsize=(8, 6))
         plt.plot(x_coords, y_coords, linewidth=0.5, alpha=0.7)
-        plt.title(f'{task_name.upper()} - 眼动轨迹', fontsize=14, pad=20)
-        plt.xlabel('X 坐标', fontsize=12)
-        plt.ylabel('Y 坐标', fontsize=12)
+        plt.title(f'{task_name.upper()} - trajectory', fontsize=14, pad=20)
+        plt.xlabel('X coordinate', fontsize=12)
+        plt.ylabel('Y coordinate', fontsize=12)
         plt.grid(True, alpha=0.3)
         
         # 转换为 base64

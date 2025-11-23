@@ -22,9 +22,9 @@
             <div class="card welcome-card">
                 <div class="logo">
                     <div class="eye-icon">👁️</div>
-                    <h1>眼动追踪认知评估系统</h1>
+                    <h1>阿兹海默症评估系统</h1>
                 </div>
-                <p class="subtitle">基于眼动追踪技术的认知功能评估工具</p>
+                <p class="subtitle">基于眼动追踪的认知评估</p>
                 
                 <div class="info-section">
                     <h3>系统说明</h3>
@@ -94,7 +94,7 @@
                     <div class="dot" id="dot-down"></div>
                     <div class="dot" id="dot-left"></div>
                 </div>
-                <p class="task-instruction">请注视屏幕上的圆点</p>
+                <p class="task-instruction">请依次注视当前高亮的圆点，用于系统校准</p>
             </div>
 
             <!-- 图片任务 -->
@@ -175,8 +175,16 @@
         </div>
     </div>
 
-    <!-- WebGazer 视频预览（隐藏） -->
-    <div id="webgazer-preview" style="display: none;"></div>
+    <!-- 全局视线红点 -->
+    <div id="gaze-dot"></div>
+
+    <!-- WebGazer 摄像头预览 -->
+    <div id="webgazer-preview">
+        <div class="preview-header">
+            <span>人脸预览</span>
+            <span class="preview-status"></span>
+        </div>
+    </div>
 
     <!-- 加载脚本 -->
     <script src="js/eye_tracker.js"></script>

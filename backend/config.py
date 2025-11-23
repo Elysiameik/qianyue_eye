@@ -9,10 +9,10 @@ DEBUG = True
 
 # 任务配置（秒）
 TASK_DURATIONS = {
-    'baseline': 15,
-    'image': 10,
-    'video': 20,
-    'text': 30
+    'baseline': 6,
+    'image': 6,
+    'video': 10,
+    'text': 15
 }
 
 # 任务名称（中文）

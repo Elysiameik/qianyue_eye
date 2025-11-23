@@ -17,10 +17,10 @@ class App {
         
         // 任务配置
         this.tasks = [
-            { type: 'baseline', name: '基线校准', duration: 15, description: '请依次注视屏幕上出现的圆点，帮助系统校准您的眼动。' },
-            { type: 'image', name: '图片识别', duration: 10, description: '请仔细观察两张图片，重点关注公鸡图片。' },
-            { type: 'video', name: '视频观看', duration: 20, description: '请观看视频，自然地跟随画面内容。' },
-            { type: 'text', name: '文字阅读', duration: 30, description: '请大声朗读屏幕上的文字段落。' }
+            { type: 'baseline', name: '基线校准', duration: 6, description: '请依次注视屏幕上出现的圆点，帮助系统校准您的眼动。' },
+            { type: 'image', name: '图片识别', duration: 6, description: '请仔细观察两张图片，重点关注公鸡图片。' },
+            { type: 'video', name: '视频观看', duration: 10, description: '请观看视频，自然地跟随画面内容。' },
+            { type: 'text', name: '文字阅读', duration: 15, description: '请大声朗读屏幕上的文字段落。' }
         ];
         
         this.currentTaskIndex = 0;
@@ -138,6 +138,11 @@ class App {
         
         // 显示对应的任务内容
         this.showTaskContent(task.type);
+
+        // Baseline 任务：先执行标定流程
+        if (task.type === 'baseline') {
+            await this.runBaselineCalibration();
+        }
         
         // 运行任务（收集眼动数据）
         const duration = task.duration;
@@ -150,6 +155,166 @@ class App {
         }).then(data => {
             console.log(`${task.type} 任务完成，收集到 ${data.length} 个数据点`);
             this.onTaskComplete(task.type, data);
+        });
+    }
+
+    /**
+     * Baseline 标定流程：依次高亮 5 个圆点并喂给 WebGazer
+     */
+    async runBaselineCalibration() {
+        const sequence = ['dot-center', 'dot-up', 'dot-right', 'dot-down', 'dot-left'];
+        const samplesPerDot = 8;
+        const durationPerDotMs = 1200;
+        const interval = durationPerDotMs / samplesPerDot;
+
+        const calibrationSamples = [];
+
+        // 启动 WebGazer（仅用于标定，不记录前端数据）
+        try {
+            if (window.webgazer) {
+                webgazer.resume();
+            }
+        } catch (e) {
+            console.warn('Baseline 标定时恢复 WebGazer 失败:', e);
+        }
+
+        for (const dotId of sequence) {
+            this.setBaselineActiveDot(dotId);
+
+            const el = document.getElementById(dotId);
+            if (!el) {
+                continue;
+            }
+
+            const rect = el.getBoundingClientRect();
+            const trueX = rect.left + rect.width / 2;
+            const trueY = rect.top + rect.height / 2;
+
+            const predXs = [];
+            const predYs = [];
+
+            for (let i = 0; i < samplesPerDot; i++) {
+                // 告诉 WebGazer：当前真实注视的位置（用于其内部回归）
+                if (window.webgazer) {
+                    try {
+                        webgazer.recordScreenPosition(trueX, trueY, 'click');
+                    } catch (e) {
+                        console.warn('recordScreenPosition 出错:', e);
+                    }
+                }
+
+                // 采集当前预测坐标，作为标定样本
+                const pred = eyeTracker.getLatestRawPrediction
+                    ? eyeTracker.getLatestRawPrediction()
+                    : null;
+                if (pred && pred.x != null && pred.y != null) {
+                    predXs.push(pred.x);
+                    predYs.push(pred.y);
+                }
+
+                await this.delay(interval);
+            }
+
+            if (predXs.length > 0 && predYs.length > 0) {
+                const meanPredX = predXs.reduce((a, b) => a + b, 0) / predXs.length;
+                const meanPredY = predYs.reduce((a, b) => a + b, 0) / predYs.length;
+                calibrationSamples.push({
+                    predX: meanPredX,
+                    predY: meanPredY,
+                    trueX,
+                    trueY
+                });
+            }
+        }
+
+        this.clearBaselineActiveDot();
+
+        try {
+            if (window.webgazer) {
+                webgazer.pause();
+            }
+        } catch (e) {
+            console.warn('Baseline 标定结束时暂停 WebGazer 失败:', e);
+        }
+
+        // 基于采样结果拟合标定映射并下发到 EyeTracker
+        const mapping = this.computeCalibrationMapping(calibrationSamples);
+        if (eyeTracker.setCalibrationMapping) {
+            eyeTracker.setCalibrationMapping(mapping);
+        }
+    }
+
+    /**
+     * 根据标定样本拟合线性映射参数
+     */
+    computeCalibrationMapping(samples) {
+        if (!samples || samples.length < 2) {
+            console.warn('标定样本不足，使用默认映射');
+            return null;
+        }
+
+        const fitAxis = (predKey, trueKey) => {
+            const n = samples.length;
+            let sumP = 0, sumT = 0;
+            for (const s of samples) {
+                sumP += s[predKey];
+                sumT += s[trueKey];
+            }
+            const meanP = sumP / n;
+            const meanT = sumT / n;
+
+            let num = 0, den = 0;
+            for (const s of samples) {
+                const dp = s[predKey] - meanP;
+                const dt = s[trueKey] - meanT;
+                num += dp * dt;
+                den += dp * dp;
+            }
+
+            if (Math.abs(den) < 1e-6) {
+                // 几乎没有变化，使用单位映射
+                return { a: 1, b: 0 };
+            }
+
+            const a = num / den;
+            const b = meanT - a * meanP;
+            return { a, b };
+        };
+
+        const xMap = fitAxis('predX', 'trueX');
+        const yMap = fitAxis('predY', 'trueY');
+
+        const mapping = {
+            ax: xMap.a,
+            bx: xMap.b,
+            ay: yMap.a,
+            by: yMap.b
+        };
+
+        console.log('拟合得到标定映射:', mapping);
+        return mapping;
+    }
+
+    /**
+     * 设置当前激活的 baseline 圆点
+     */
+    setBaselineActiveDot(dotId) {
+        document.querySelectorAll('.baseline-dots .dot').forEach(el => {
+            el.classList.remove('dot-active');
+        });
+
+        const el = document.getElementById(dotId);
+        if (el) {
+            el.classList.add('dot-active');
+        }
+    }
+
+    /**
+     * 清除所有 baseline 激活状态
+     */
+    clearBaselineActiveDot() {
+        document.querySelectorAll('.baseline-dots .dot').forEach(el => {
+            el.classList.remove('dot-active');
         });
     }
 
